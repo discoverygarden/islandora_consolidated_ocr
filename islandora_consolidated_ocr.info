@@ -1,0 +1,7 @@
+name = Islandora Consolidated OCR
+description = "Consolidates OCR for existing pages without causing re-generation."
+package = Islandora
+version = 7.x-dev
+core = 7.x
+dependencies[] = islandora_paged_content
+php = 5.3
