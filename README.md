@@ -2,7 +2,8 @@
 
 ## Introduction
 
-Provides a UI and Drush based options to consolidate OCR without forcing re-generation of the OCR datastream.
+Provides a UI and Drush based options to consolidate OCR without forcing re-generation
+of the OCR datastream.
 
 ## Requirements
 
@@ -13,13 +14,13 @@ This module requires the following modules/libraries:
 
 ## Installation
 
-Install as usual, see 
-[this](https://drupal.org/documentation/install/modules-themes/modules-7) for 
+Install as usual, see
+[this](https://drupal.org/documentation/install/modules-themes/modules-7) for
 further information.
 
 ## Troubleshooting/Issues
 
-Having problems or solved a problem? Contact 
+Having problems or solved a problem? Contact
 [discoverygarden](http://support.discoverygarden.ca).
 
 ## Maintainers/Sponsors
