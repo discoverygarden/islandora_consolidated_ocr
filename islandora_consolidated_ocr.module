@@ -1,0 +1,111 @@
+<?php
+
+/**
+ * @file
+ * Module used to handle consolidating OCR batches through the UI and Drush.
+ */
+
+/**
+ * Implements hook_islandora_paged_content_pages_management_tabs_alter().
+ */
+function islandora_consolidated_ocr_islandora_paged_content_pages_management_tabs_alter(&$manage_tabs, $context) {
+  // Find where the OCR tab currently is.
+  $index = array_search('ocr', array_keys($manage_tabs['manage_pages']));
+
+  // If the OCR tab isn't present can assume the user doesn't have permission.
+  if ($index) {
+    $consolidate_ocr = array(
+      'consolidate_ocr' => array(
+        '#access' => islandora_object_access(ISLANDORA_ADD_DS, $context['object']),
+        '#title' => t('Consolidate OCR'),
+        '#type' => 'fieldset',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        'form' => drupal_get_form('islandora_consolidated_ocr_manage_form', $context['object']),
+      ),
+    );
+    array_splice($manage_tabs['manage_pages'], $index + 1, 0, $consolidate_ocr);
+  }
+}
+
+/**
+ * Form for handling the consolidation of OCR via the manage UI.
+ *
+ * @param array $form
+ *   An array representing a form within Drupal.
+ * @param array $form_state
+ *   An array containing the Drupal form_state.
+ * @param AbstractObject $object
+ *   The book object being managed.
+ *
+ * @return array
+ *   The form to be rendered.
+ */
+function islandora_consolidated_ocr_manage_form(array $form, array $form_state, AbstractObject $object) {
+  $form['description'] = array(
+    '#markup' => t('This will combine any and all existing OCR datastreams to the parent without re-generation occurring.'),
+  );
+  $form['consolidate'] = array(
+    '#type' => 'actions',
+    'submit' => array(
+      '#type' => 'submit',
+      '#value' => t('Consolidate OCR'),
+    ),
+  );
+  return $form;
+}
+
+/**
+ * Submit handler for the consolidate OCR form.
+ *
+ * @param array $form
+ *   An array representing a form within Drupal.
+ * @param array $form_state
+ *   An array containing the Drupal form_state.
+ */
+function islandora_consolidated_ocr_manage_form_submit(array $form, array &$form_state) {
+  module_load_include('inc', 'islandora_consolidated_ocr', 'includes/batch');
+  $object = islandora_object_load($form_state['build_info']['args'][0]->id);
+  $pages = array_keys(islandora_paged_content_get_pages($object));
+  $batch = islandora_consolidated_ocr_batch($object, $pages);
+  batch_set($batch);
+}
+
+/**
+ * Grabs the OCR of a page to be used in consolidation.
+ *
+ * @param array $pages
+ *   All the pages to perform OCR on.
+ * @param array|DrushBatchContext $context
+ *   The context of the current batch.
+ *
+ * @note This operation lives here as opposed to the batch includes file as the
+ * file being used within the Drupal batch is still islandora_paged_content's.
+ */
+function islandora_consolidated_ocr_grab_page_ocr_operation(array $pages, &$context) {
+  module_load_include('inc', 'islandora', 'includes/utilities');
+  $page = islandora_paged_content_start_batch_operation($pages, $context);
+  if ($page) {
+    $page = islandora_object_load($page);
+
+    if (isset($page['OCR'])) {
+      $scheme = file_default_scheme();
+      $filename = file_create_filename('consolidateocr', "$scheme://");
+      $page['OCR']->getContent($filename);
+      islandora_temp_file_entry($filename);
+      $context['results']['pages'][] = drupal_realpath($filename);
+      $context['results']['successful'][] = TRUE;
+    }
+    islandora_paged_content_end_batch_operation($context, 1, array(
+      'Retrieved @derived of @set_size OCR datastreams.',
+      array(
+        '@set_size' => count($context['results']['successful']),
+        '@derived' => count(array_filter($context['results']['successful'])),
+      ),
+    ));
+    $context['message'] = t('Retrieved OCR of page @page of @total ...', array(
+      '@page' => $context['sandbox']['progress'],
+      '@total' => $context['sandbox']['total'],
+    ));
+  }
+}
